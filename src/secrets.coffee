@@ -26,6 +26,7 @@ setSecret = (name, value) ->
   else
     await manager.createSecret Name: name, SecretString: value
   secrets[name] = value
+
 export {
   hasSecret
   getSecret
