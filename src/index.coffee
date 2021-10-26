@@ -19,7 +19,15 @@ getSecret = (name) ->
     { SecretString } = await manager.getSecretValue SecretId: name
     JSON.parse SecretString
 
+setSecret = (name, value) ->
+  value = JSON.stringify value
+  if await hasSecret name
+    await manager.updateSecret SecretId: name, SecretString: value
+  else
+    await manager.createSecret Name: name, SecretString: value
+  secrets[name] = value
 export {
   hasSecret
   getSecret
+  setSecret
 }

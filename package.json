@@ -1,5 +1,5 @@
 {
-  "name": "dolores",
+  "name": "@dashkite/dolores",
   "version": "0.0.0",
   "description": "AWS Utility Functions For Use With Studio",
   "exports": {
@@ -37,5 +37,8 @@
   "devDependencies": {
     "@dashkite/genie": "^0.5.4",
     "@dashkite/genie-presets": "^0.5.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.38.0"
   }
 }
