@@ -1,27 +1,35 @@
 import Crypto from "crypto"
 import { Lambda } from "@aws-sdk/client-lambda"
 import { S3 } from "@aws-sdk/client-s3"
+import * as Text from "@dashkite/joy/text"
 
-lambdaClient = new Lambda region: "us-east-1"
-s3Client = new S3 region: "us-east-1"
+AWS =
+  Lambda: new Lambda region: "us-east-1"
+  S3: new S3 region: "us-east-1"
 
 md5 = (buffer) ->
   Crypto.createHash('md5').update(buffer).digest("base64")
 
-hasLambda = (name) ->
+hasLambda = (name) -> (await getLambda name)?
+
+getLambda = (name) ->
   try
-    await lambdaClient.getFunction FunctionName: name
-    true
+    await AWS.Lambda.getFunction FunctionName: name
   catch error
     if /ResourceNotFoundException/.test error.toString()
-      false
+      undefined
     else
       throw error
 
+getLambdaVersion = (name, version) ->
+  { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
+  for version in Versions
+    if version == Text.parseNumber version.Version
+      return version
+  undefined
+
 # TODO add function for creating bucket and then check for bucket
 # existance before uploading...
-
-# TODO make bucket name configurable
 
 defaults =
   bucket: "dolores.dashkite.com"
@@ -51,7 +59,7 @@ publishLambda = (name, data, configuration) ->
     TracingConfig: Mode: "PassThrough"
     Role: role
 
-  await s3Client.putObject
+  await AWS.S3.putObject
     Bucket: bucket
     Key: name
     ContentType: "application/zip"
@@ -60,17 +68,17 @@ publishLambda = (name, data, configuration) ->
 
   if await hasLambda name
 
-    await lambdaClient.updateFunctionCode
+    await AWS.Lambda.updateFunctionCode
       FunctionName: name
       Publish: false
       S3Bucket: bucket
       S3Key: name
   
-    lambdaClient.updateFunctionConfiguration _configuration
+    AWS.Lambda.updateFunctionConfiguration _configuration
 
   else
 
-    lambdaClient.createFunction {
+    AWS.Lambda.createFunction {
       _configuration...
       Code:
         S3Bucket: bucket
@@ -78,7 +86,7 @@ publishLambda = (name, data, configuration) ->
     }
 
 versionLambda = (name) ->
-  { Version } = await lambdaClient.publishVersion FunctionName: name
+  { Version } = await AWS.Lambda.publishVersion FunctionName: name
   Version
 
 export {
