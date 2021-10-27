@@ -1,3 +1,4 @@
+import Crypto from "crypto"
 import { Lambda } from "@aws-sdk/client-lambda"
 import { S3 } from "@aws-sdk/client-s3"
 
@@ -65,19 +66,20 @@ publishLambda = (name, data, configuration) ->
       S3Bucket: bucket
       S3Key: name
   
-    await lambdaClient.updateFunctionConfiguration _configuration
+    lambdaClient.updateFunctionConfiguration _configuration
 
   else
 
-    await lambdaClient.createFunction
+    lambdaClient.createFunction {
       _configuration...
       Code:
         S3Bucket: bucket
         S3Key: name
+    }
 
 versionLambda = (name) ->
-  await context.aws.Lambda.publishVersion
-    FunctionName: name
+  { Version } = await lambdaClient.publishVersion FunctionName: name
+  Version
 
 export {
   hasLambda
