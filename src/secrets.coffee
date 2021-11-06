@@ -14,10 +14,16 @@ hasSecret = (name) ->
       throw error
 
 # TODO maybe promote this to library status
+_getSecret = (name) ->
+  secrets[name] ?= await manager.getSecretValue SecretId: name
+
 getSecret = (name) ->
-  secrets[name] ?= await do ->
-    { SecretString } = await manager.getSecretValue SecretId: name
-    JSON.parse SecretString
+  { SecretString } = await _getSecret name
+  JSON.parse SecretString
+
+getSecretARN = (name) ->
+  { ARN } = await _getSecret name
+  ARN
 
 setSecret = (name, value) ->
   value = JSON.stringify value
@@ -30,5 +36,6 @@ setSecret = (name, value) ->
 export {
   hasSecret
   getSecret
+  getSecretARN
   setSecret
 }

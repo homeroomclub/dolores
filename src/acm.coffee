@@ -10,7 +10,9 @@ getCertificate = (domain) ->
     CertificateStatuses: [ "ISSUED" ]
   for summary in CertificateSummaryList
     if domain == summary.DomainName
-      return summary
+      return 
+        _: summary
+        arn: summary.CertificateArn
   undefined  
 
 exports {

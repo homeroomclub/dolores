@@ -7,7 +7,9 @@ getHostedZone = (domain) ->
   { HostedZones } = await AWS.Route53.listHostedZones MaxItems: "100"
   for zone in HostedZones
     if domain == zone.Name
-      return zone
+      return
+        _: zone
+        id: zone.Id
   undefined
 
 export {

@@ -14,7 +14,9 @@ hasLambda = (name) -> (await getLambda name)?
 
 getLambda = (name) ->
   try
-    await AWS.Lambda.getFunction FunctionName: name
+    lambda = await AWS.Lambda.getFunction FunctionName: name
+    _: lambda
+    arn: lambda.FunctionArn
   catch error
     if /ResourceNotFoundException/.test error.toString()
       undefined
@@ -23,10 +25,27 @@ getLambda = (name) ->
 
 getLambdaVersion = (name, version) ->
   { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
-  for version in Versions
-    if version == Text.parseNumber version.Version
-      return version
+  for current in Versions
+    if version == Text.parseNumber current.Version
+      return
+        _: current
+        arn: current.FunctionArn
+        version: Text.parseNumber currentVersion
   undefined
+
+getLatestLambda = (name) ->
+  { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
+  result = undefined
+  max = 0
+  for current in Versions
+    version = Text.parseNumber current.Version
+    if version > max
+      max = version
+      result = current
+  if result?
+    _: result
+    arn: result.FunctionArn
+    version: max
 
 # TODO add function for creating bucket and then check for bucket
 # existance before uploading...
@@ -36,7 +55,7 @@ defaults =
   role: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   memory: 3000
   timeout: 30
-  handler: "index.handler"
+  handler: "src/index.handler"
   runtime: "nodejs14.x"
 
 publishLambda = (name, data, configuration) ->
@@ -86,11 +105,16 @@ publishLambda = (name, data, configuration) ->
     }
 
 versionLambda = (name) ->
-  { Version } = await AWS.Lambda.publishVersion FunctionName: name
-  Version
+  result = await AWS.Lambda.publishVersion FunctionName: name
+  _: result
+  arn: result.FunctionArn
+  version: Text.parseNumber result.Version
 
 export {
   hasLambda
+  getLambda
+  getLambdaVersion
+  getLatestLambda
   publishLambda
   versionLambda
 }
