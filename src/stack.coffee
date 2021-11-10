@@ -10,41 +10,60 @@ getStack = (name) ->
   try
     { Stacks } = await AWS.CloudFormation.describeStacks StackName: name
     # TODO is there anything else to return here?
+    status: Stacks[0]?.StackStatus
     _: Stacks[0]
   catch
     undefined
 
-deployStack = (name, template) ->
+deleteStack = (name) ->
+  await AWS.CloudFormation.deleteStack StackName: name
+  loop
+    stack = await getStack name
+    console.log "delete-wait": stack?.status
+    switch stack?.status
+      when "DELETE_IN_PROGRESS"
+        await Time.sleep 5000
+      when "DELETE_COMPLETE", undefined
+        return
+      else
+        throw new Error "stack deletion failed:
+          status: #{stack.status}, reason: #{stack._.StackStatusReason}"
+
+deployStack = (name, template, capabilities) ->
 
   _template =
     StackName: name
-    Capabilities: [ "CAPABILITY_IAM" ]
+    Capabilities: capabilities ? [ "CAPABILITY_IAM" ]
     # Tags: [{
     #   Key: "domain"
     #   Value: configuration.tld
     # }]
     TemplateBody: template
 
-  if await hasStack name
-    await AWS.CloudFormation.updateStack _template
+  if ( stack = await getStack name )?
+    console.log deploy: stack.status
+    if stack.status in [ "ROLLBACK_COMPLETE", "ROLLBACK_FAILED" ]
+      await deleteStack name
+      await AWS.CloudFormation.createStack _template
+    else
+      await AWS.CloudFormation.updateStack _template
   else
     await AWS.CloudFormation.createStack _template
 
   loop
-    if ( stack = await getStack name )?
-      { StackStatus, StackStatusReason } = stack._
-      break if !StackStatus
-      switch StackStatus
-        when "CREATE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"
-          await Time.sleep 5000
-        when "CREATE_COMPLETE", "UPDATE_COMPLETE"
-          return stack
-        else
-          throw new Error "stack creation failed:
-            status: #{StackStatus}, reason: #{StackStatusReason}"
-    else
-      # ... wtf
-      throw new Error "unable to load stack: #{name}"
+    stack = await getStack name
+    console.log "deploy-wait": stack?.status
+    switch stack?.status
+      when "CREATE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"
+        await Time.sleep 5000
+      when "CREATE_COMPLETE", "UPDATE_COMPLETE"
+        return stack
+      when undefined
+        # ... wtf
+        throw new Error "unable to load stack: #{name}"
+      else
+        throw new Error "stack creation failed:
+          status: #{stack.status}, reason: #{stack._.StackStatusReason}"
 
 export {
   hasStack
