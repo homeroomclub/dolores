@@ -15,55 +15,82 @@ getStack = (name) ->
   catch
     undefined
 
-deleteStack = (name) ->
-  await AWS.CloudFormation.deleteStack StackName: name
-  loop
-    stack = await getStack name
-    console.log "delete-wait": stack?.status
-    switch stack?.status
-      when "DELETE_IN_PROGRESS"
-        await Time.sleep 5000
-      when "DELETE_COMPLETE", undefined
-        return
-      else
-        throw new Error "stack deletion failed:
-          status: #{stack.status}, reason: #{stack._.StackStatusReason}"
+
+getStatus = (context) ->
+  context.stack = await getStack context.name
+  context.stack.status
+
+nodes = [
+
+    pattern: "start"
+    next: getStatus
+    nodes: [
+      pattern: /COMPLETE$/, next: -> "update"
+    ]
+  ,
+    pattern: "create"
+    action: ({ template }) -> AWS.CloudFormation.createStack template
+    next: getStatus
+  ,
+    pattern: "update"
+    action: ({ template }) -> AWS.CloudFormation.updateStack template
+    next: getStatus
+  ,
+    pattern: "delete"
+    action: ({ name }) -> AWS.CloudFormation.deleteStack StackName: name
+    next: getStatus
+  ,
+    pattern: "done"
+    result: ({ stack }) -> stack 
+  ,
+    pattern: /^(CREATE|UPDATE)_COMPLETE$/
+    next: -> "done"
+  ,
+    pattern: "DELETE_COMPLETE"
+    next: -> "create"
+  ,
+    pattern: /^ROLLBACK_(COMPLETE|FAILED)$/
+    next: -> "delete"
+  ,
+    pattern: /IN_PROGRESS$/
+    action: -> Time.sleep 5000
+    next: getStatus
+  
+]
+
+turn = (nodes, state, context) ->
+  console.log state.name
+  for node in nodes
+    if node.pattern == state.name || node.pattern.test? state.name
+      if node.action?
+        await node.action context, state
+      if node.result?
+        state.result = await node.result context, state
+      else if node.next?
+        state.name = await node.next context, state
+        if node.nodes?
+          await turn node.nodes, state, context
+      return undefined
+
 
 deployStack = (name, template, capabilities) ->
 
-  _template =
-    StackName: name
-    Capabilities: capabilities ? [ "CAPABILITY_IAM" ]
-    # Tags: [{
-    #   Key: "domain"
-    #   Value: configuration.tld
-    # }]
-    TemplateBody: template
-
-  if ( stack = await getStack name )?
-    console.log deploy: stack.status
-    if stack.status in [ "ROLLBACK_COMPLETE", "ROLLBACK_FAILED" ]
-      await deleteStack name
-      await AWS.CloudFormation.createStack _template
-    else
-      await AWS.CloudFormation.updateStack _template
-  else
-    await AWS.CloudFormation.createStack _template
+  state = name: "start"
+  context =
+    name: name
+    template: 
+      StackName: name
+      Capabilities: capabilities ? [ "CAPABILITY_IAM" ]
+      # Tags: [{
+      #   Key: "domain"
+      #   Value: configuration.tld
+      # }]
+      TemplateBody: template
 
   loop
-    stack = await getStack name
-    console.log "deploy-wait": stack?.status
-    switch stack?.status
-      when "CREATE_IN_PROGRESS", "UPDATE_IN_PROGRESS", "UPDATE_COMPLETE_CLEANUP_IN_PROGRESS"
-        await Time.sleep 5000
-      when "CREATE_COMPLETE", "UPDATE_COMPLETE"
-        return stack
-      when undefined
-        # ... wtf
-        throw new Error "unable to load stack: #{name}"
-      else
-        throw new Error "stack creation failed:
-          status: #{stack.status}, reason: #{stack._.StackStatusReason}"
+    await turn nodes, state, context
+    if state.result?
+      return state.result
 
 export {
   hasStack

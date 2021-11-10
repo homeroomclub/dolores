@@ -16,7 +16,7 @@ getLambda = (name) ->
   try
     lambda = await AWS.Lambda.getFunction FunctionName: name
     _: lambda
-    arn: lambda.FunctionArn
+    arn: lambda.Configuration.FunctionArn
   catch error
     if /ResourceNotFoundException/.test error.toString()
       undefined

@@ -8,14 +8,15 @@ hasCertificate = (domain) -> (await getCertification domain)?
 getCertificate = (domain) ->
   { CertificateSummaryList } = await AWS.ACM.listCertificates
     CertificateStatuses: [ "ISSUED" ]
-  for summary in CertificateSummaryList
-    if domain == summary.DomainName
+  for { CertificateArn } in CertificateSummaryList
+    { Certificate } = await AWS.ACM.describeCertificate { CertificateArn }
+    if domain in Certificate.SubjectAlternativeNames
       return 
-        _: summary
-        arn: summary.CertificateArn
+        _: Certificate
+        arn: CertificateArn
   undefined  
 
-exports {
+export {
   hasCertificate
   getCertificate
 }
