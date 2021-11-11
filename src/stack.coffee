@@ -1,5 +1,6 @@
 import { CloudFormation } from "@aws-sdk/client-cloudformation"
 import * as Time from "@dashkite/joy/time"
+import { runNetwork } from "./helpers"
 
 AWS =
   CloudFormation: new CloudFormation region: "us-east-1"
@@ -15,17 +16,17 @@ getStack = (name) ->
   catch
     undefined
 
-
 getStatus = (context) ->
   context.stack = await getStack context.name
-  context.stack.status
+  context.stack?.status ? "create"
 
 nodes = [
 
     pattern: "start"
     next: getStatus
     nodes: [
-      pattern: /COMPLETE$/, next: -> "update"
+      pattern: /COMPLETE$/
+      next: -> "update"
     ]
   ,
     pattern: "create"
@@ -55,27 +56,16 @@ nodes = [
     pattern: /IN_PROGRESS$/
     action: -> Time.sleep 5000
     next: getStatus
-  
+  ,
+    pattern: /FAILED$/
+    result: ({name}) -> throw new Error "Unable to gracefully recover from state [ #{name} ]"
+
 ]
-
-turn = (nodes, state, context) ->
-  console.log state.name
-  for node in nodes
-    if node.pattern == state.name || node.pattern.test? state.name
-      if node.action?
-        await node.action context, state
-      if node.result?
-        state.result = await node.result context, state
-      else if node.next?
-        state.name = await node.next context, state
-        if node.nodes?
-          await turn node.nodes, state, context
-      return undefined
-
 
 deployStack = (name, template, capabilities) ->
 
   state = name: "start"
+
   context =
     name: name
     template: 
@@ -87,10 +77,13 @@ deployStack = (name, template, capabilities) ->
       # }]
       TemplateBody: template
 
-  loop
-    await turn nodes, state, context
-    if state.result?
-      return state.result
+  try
+    await runNetwork nodes, state, context
+  catch error
+    if /No updates/.test error.toString()
+      console.log "no updates for stack [#{name}]"
+    else
+      throw error
 
 export {
   hasStack

@@ -13,7 +13,6 @@ hasSecret = (name) ->
     else
       throw error
 
-# TODO maybe promote this to library status
 _getSecret = (name) ->
   secrets[name] ?= await manager.getSecretValue SecretId: name
 
@@ -24,6 +23,10 @@ getSecret = (name) ->
 getSecretARN = (name) ->
   { ARN } = await _getSecret name
   ARN
+
+getSecretReference = (name) ->
+  { VersionId } = await _getSecret name
+  "{{resolve:secretsmanager:#{name}:SecretString:::#{VersionId}}}"
 
 setSecret = (name, value) ->
   value = JSON.stringify value
@@ -37,5 +40,6 @@ export {
   hasSecret
   getSecret
   getSecretARN
+  getSecretReference
   setSecret
 }

@@ -1,4 +1,5 @@
 import { IAM } from "@aws-sdk/client-iam"
+import YAML from "js-yaml"
 
 import { deployStack } from "./stack"
 
@@ -34,7 +35,7 @@ createRole = ( name, policies ) ->
           ]
 
   await deployStack "#{name}-stack",
-    ( JSON.stringify _template ),
+    ( YAML.dump _template ),
     [ "CAPABILITY_NAMED_IAM" ]
 
   # TODO maybe get this as an output from the template
