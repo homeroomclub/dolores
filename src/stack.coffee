@@ -25,8 +25,14 @@ nodes = [
     pattern: "start"
     next: getStatus
     nodes: [
-      pattern: /COMPLETE$/
-      next: -> "update"
+        pattern: /UPDATE_ROLLBACK_(COMPLETE|FAILED)$/
+        next: -> "update"
+      ,
+        pattern: /ROLLBACK_(COMPLETE|FAILED)$/
+        next: -> "delete"
+      ,
+        pattern: /COMPLETE$/
+        next: -> "update"
     ]
   ,
     pattern: "create"
@@ -50,8 +56,8 @@ nodes = [
     pattern: "DELETE_COMPLETE"
     next: -> "create"
   ,
-    pattern: /^ROLLBACK_(COMPLETE|FAILED)$/
-    next: -> "delete"
+    pattern: /ROLLBACK_(COMPLETE|FAILED)$/
+    next: ({name}) -> throw new Error "Deploy failed for [ #{name} ]"
   ,
     pattern: /IN_PROGRESS$/
     action: -> Time.sleep 5000
@@ -63,6 +69,8 @@ nodes = [
 ]
 
 deployStack = (name, template, capabilities) ->
+
+  console.log template
 
   state = name: "start"
 

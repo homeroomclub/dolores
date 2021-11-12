@@ -13,7 +13,7 @@ turn = (nodes, state, context) ->
           await turn node.nodes, state, context
       return undefined
   # if we get here, no nodes matched, which is a bad state
-  # TODO throw
+  throw new Error "Unknown state [ #{state.name} ]"
 
 runNetwork = (nodes, state, context) ->
   loop

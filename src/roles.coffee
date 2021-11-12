@@ -38,10 +38,23 @@ createRole = ( name, policies ) ->
     ( YAML.dump _template ),
     [ "CAPABILITY_NAMED_IAM" ]
 
-  # TODO maybe get this as an output from the template
-  { Role } = await AWS.IAM.getRole RoleName: name
-  Role.Arn
+  undefined
+
+hasRole = (name) -> (await getRole name)?
+
+getRole = (name) ->
+  # TODO handle not found explicitly
+  # see lambda for example but unsure if the exception is always the same
+  try
+    { Role } = await AWS.IAM.getRole RoleName: name
+    arn: Role.Arn
+    _: Role
+
+getRoleARN = (name) -> (await getRole name).arn
 
 export {
   createRole
+  hasRole
+  getRole
+  getRoleARN
 }
