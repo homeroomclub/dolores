@@ -55,7 +55,7 @@ defaults =
   role: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   memory: 3000
   timeout: 30
-  handler: "src/index.handler"
+  handler: "build/lambda/src/index.handler"
   runtime: "nodejs14.x"
 
 publishLambda = (name, data, configuration) ->

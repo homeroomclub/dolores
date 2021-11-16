@@ -13,12 +13,19 @@ hasSecret = (name) ->
     else
       throw error
 
+# TODO replace this primitive expiry mechanism with a means to message lambdas?
+# and/or we can use worker message queues...
 _getSecret = (name) ->
-  secrets[name] ?= await manager.getSecretValue SecretId: name
+  if !( secret = secrets[name] )? || ( Date.now() > secret.expires )
+    secret =
+      value: await manager.getSecretValue SecretId: name
+      expires: Date.now() + 60000
+    secrets[ name ] = secret
+  secret.value
 
 getSecret = (name) ->
   { SecretString } = await _getSecret name
-  JSON.parse SecretString
+  SecretString
 
 getSecretARN = (name) ->
   { ARN } = await _getSecret name
@@ -29,7 +36,6 @@ getSecretReference = (name) ->
   "{{resolve:secretsmanager:#{name}:SecretString:::#{VersionId}}}"
 
 setSecret = (name, value) ->
-  value = JSON.stringify value
   if await hasSecret name
     await manager.updateSecret SecretId: name, SecretString: value
   else
