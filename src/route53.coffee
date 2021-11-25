@@ -12,7 +12,10 @@ getHostedZone = (domain) ->
         id: zone.Id
   undefined
 
+getHostedZoneID = (domain) -> ( await getHostedZone domain ).id
+
 export {
   getHostedZone
+  getHostedZoneID
 }
 

@@ -93,8 +93,12 @@ deployStack = (name, template, capabilities) ->
     else
       throw error
 
+deleteStack = (name) ->
+  AWS.CloudFormation.deleteStack StackName: name
+
 export {
   hasStack
   getStack
   deployStack
+  deleteStack
 }

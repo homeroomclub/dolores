@@ -10,7 +10,11 @@ turn = (nodes, state, context) ->
         state.name = await node.next context, state
         console.log "#{original} -> #{state.name}"
         if node.nodes?
-          await turn node.nodes, state, context
+          try
+            await turn node.nodes, state, context
+          catch error
+            if ! /^Unknown state/.test error.message
+              throw error
       return undefined
   # if we get here, no nodes matched, which is a bad state
   throw new Error "Unknown state [ #{state.name} ]"

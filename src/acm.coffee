@@ -16,7 +16,10 @@ getCertificate = (domain) ->
         arn: CertificateArn
   undefined  
 
+getCertificateARN = (domain) -> ( await getCertificate domain ).arn
+
 export {
   hasCertificate
   getCertificate
+  getCertificateARN
 }

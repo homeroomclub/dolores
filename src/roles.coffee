@@ -22,7 +22,10 @@ createRole = ( name, policies ) ->
             Statement: [
               Effect: "Allow"
               Principal:
-                Service: [ "lambda.amazonaws.com" ]
+                Service: [
+                  "lambda.amazonaws.com"
+                  "edgelambda.amazonaws.com"
+                ]
               Action:[ "sts:AssumeRole" ]
             ]
           # ManagedPolicyArns:
