@@ -35,17 +35,17 @@
   },
   "homepage": "https://github.com/dashkite/dolores#readme",
   "devDependencies": {
-    "@dashkite/genie": "^0.5.4",
-    "@dashkite/genie-presets": "^0.5.2"
+    "@dashkite/genie": "^0.5.6",
+    "@dashkite/genie-presets": "^0.5.4"
   },
   "dependencies": {
-    "@aws-sdk/client-acm": "^3.40.0",
-    "@aws-sdk/client-cloudformation": "^3.40.0",
-    "@aws-sdk/client-iam": "^3.40.0",
-    "@aws-sdk/client-lambda": "^3.38.0",
-    "@aws-sdk/client-route-53": "^3.40.0",
-    "@aws-sdk/client-s3": "^3.38.0",
-    "@aws-sdk/client-secrets-manager": "^3.38.0",
+    "@aws-sdk/client-acm": "^3.42.0",
+    "@aws-sdk/client-cloudformation": "^3.42.0",
+    "@aws-sdk/client-iam": "^3.42.0",
+    "@aws-sdk/client-lambda": "^3.42.0",
+    "@aws-sdk/client-route-53": "^3.42.0",
+    "@aws-sdk/client-s3": "^3.42.0",
+    "@aws-sdk/client-secrets-manager": "^3.42.0",
     "js-yaml": "^4.1.0"
   }
 }
