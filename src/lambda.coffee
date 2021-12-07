@@ -70,9 +70,6 @@ getLatestLambda = (name) ->
 
 getLatestLambdaARN = (name) -> ( await getLatestLambda name ).arn
 
-# TODO add function for creating bucket and then check for bucket
-# existance before uploading...
-
 defaults =
   bucket: "dolores.dashkite.com"
   role: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -95,8 +92,6 @@ publishLambda = (name, data, configuration) ->
 
   _configuration =
     FunctionName: name
-    # TODO https://aws.amazon.com/de/blogs/compute/coming-soon-expansion-of-aws-lambda-states-to-all-functions/
-    Description: "aws:states:opt-in"
     Handler: handler
     Runtime: runtime
     MemorySize: memory
@@ -113,8 +108,6 @@ publishLambda = (name, data, configuration) ->
       FunctionName: name
       Publish: false
       ZipFile: data
-      # S3Bucket: bucket
-      # S3Key: name
 
     await waitForReady name
     
@@ -127,8 +120,6 @@ publishLambda = (name, data, configuration) ->
     await AWS.Lambda.createFunction {
       _configuration...
       Code: ZipFile: data
-      # S3Bucket: bucket
-      # S3Key: name
     }
 
     waitForReady name
