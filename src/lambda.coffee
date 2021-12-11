@@ -136,6 +136,7 @@ deleteLambda = (name) ->
 export {
   hasLambda
   getLambda
+  waitForReady
   getLambdaVersion
   getLatestLambda
   getLatestLambdaARN
