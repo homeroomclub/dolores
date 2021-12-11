@@ -19,11 +19,27 @@ getLambda = (name) ->
     _: lambda
     arn: lambda.Configuration.FunctionArn
     state: lambda.Configuration.State
+    lastStatus: lambda.Configuration.LastUpdateStatus
   catch error
     if /ResourceNotFoundException/.test error.toString()
       undefined
     else
       throw error
+
+# AWS added internal state management to Lambda in an effort to improve the performance
+# of the invocation cycle. This is a broad helper to wait until the lambda is ready
+# to go and accept more changes to its state.
+waitForReady = (name) ->
+  loop
+    { state, lastStatus } = await getLambda name
+    if ( state == "Active" ) && ( lastStatus == "Successful" )
+      break
+    else if state == "Failed"
+      throw new Error "Lambda [ #{name} ] State is Failed."
+    else if lastStatus == "Failed"
+      throw new Error "Lambda [ #{name} ] LastUpdateStatus is Failed."
+    else
+      await Time.sleep 1000
 
 getLambdaVersion = (name, version) ->
   { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
@@ -54,9 +70,6 @@ getLatestLambda = (name) ->
 
 getLatestLambdaARN = (name) -> ( await getLatestLambda name ).arn
 
-# TODO add function for creating bucket and then check for bucket
-# existance before uploading...
-
 defaults =
   bucket: "dolores.dashkite.com"
   role: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -74,12 +87,11 @@ publishLambda = (name, data, configuration) ->
     bucket
     memory
     timeout
+    environment
   } = { defaults..., configuration... }
 
   _configuration =
     FunctionName: name
-    # TODO https://aws.amazon.com/de/blogs/compute/coming-soon-expansion-of-aws-lambda-states-to-all-functions/
-    Description: "aws:states:opt-in"
     Handler: handler
     Runtime: runtime
     MemorySize: memory
@@ -87,12 +99,8 @@ publishLambda = (name, data, configuration) ->
     TracingConfig: Mode: "PassThrough"
     Role: role
 
-  # await AWS.S3.putObject
-  #   Bucket: bucket
-  #   Key: name
-  #   ContentType: "application/zip"
-  #   ContentMD5: md5 data
-  #   Body: data
+  if environment?
+    _configuration.Environment = Variables: environment
 
   if await hasLambda name
 
@@ -100,29 +108,21 @@ publishLambda = (name, data, configuration) ->
       FunctionName: name
       Publish: false
       ZipFile: data
-      # S3Bucket: bucket
-      # S3Key: name
 
-    # TODO need to figure out why this isn't working  
-    # loop
-    #   { state } = await getLambda name
-    #   if state != "Pending"
-    #     break
-    #   else
-    #     await Time.sleep 2000
-    # if state != "Failed"
-    #   AWS.Lambda.updateFunctionConfiguration _configuration
-    # else
-    #   throw new Error "Update code for Lambda [ #{name} ] failed"
+    await waitForReady name
+    
+    await AWS.Lambda.updateFunctionConfiguration _configuration
+
+    waitForReady name
 
   else
 
-    AWS.Lambda.createFunction {
+    await AWS.Lambda.createFunction {
       _configuration...
       Code: ZipFile: data
-      # S3Bucket: bucket
-      # S3Key: name
     }
+
+    waitForReady name
 
 versionLambda = (name) ->
   result = await AWS.Lambda.publishVersion FunctionName: name
@@ -136,6 +136,7 @@ deleteLambda = (name) ->
 export {
   hasLambda
   getLambda
+  waitForReady
   getLambdaVersion
   getLatestLambda
   getLatestLambdaARN
