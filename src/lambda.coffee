@@ -69,6 +69,7 @@ getLatestLambda = (name) ->
     version: max
 
 getLatestLambdaARN = (name) -> ( await getLatestLambda name ).arn
+getLambdaARN = getLatestLambdaARN
 
 defaults =
   bucket: "dolores.dashkite.com"
@@ -140,6 +141,7 @@ export {
   getLambdaVersion
   getLatestLambda
   getLatestLambdaARN
+  getLambdaARN
   publishLambda
   versionLambda
   deleteLambda
