@@ -1,6 +1,6 @@
 import YAML from "js-yaml"
 
-import { deployStack } from "./stack"
+import { deployStack, deleteStack } from "./stack"
 
 # TODO support patterns
 
@@ -32,9 +32,11 @@ createRule = ({ name, target, schedule }) ->
             "Fn::GetAtt": [ "Event" , "Arn" ]
 
 
-  await deployStack "#{name}-event-stack", YAML.dump _template
+  await deployStack name, YAML.dump _template
 
   undefined
+
+deleteRule = (name) -> deleteStack name
 
 hasRule = (name) -> (await getRule name)?
 
@@ -44,6 +46,7 @@ getRuleARN = (name) -> (await getRule name).arn
 
 export {
   createRule
+  deleteRule
   hasRule
   getRule
   getRuleARN

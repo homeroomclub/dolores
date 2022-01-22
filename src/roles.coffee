@@ -1,7 +1,7 @@
 import { IAM } from "@aws-sdk/client-iam"
 import YAML from "js-yaml"
 
-import { deployStack } from "./stack"
+import { deployStack, deleteStack } from "./stack"
 
 AWS =
   IAM: new IAM region: "us-east-1"
@@ -37,11 +37,13 @@ createRole = ( name, policies ) ->
               Statement: policies
           ]
 
-  await deployStack "#{name}-stack",
+  await deployStack name,
     ( YAML.dump _template ),
     [ "CAPABILITY_NAMED_IAM" ]
 
   undefined
+
+deleteRole = (name) -> deleteStack name
 
 hasRole = (name) -> (await getRole name)?
 
