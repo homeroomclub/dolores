@@ -1,3 +1,22 @@
+lift = (M, options) ->
+
+  options ?= region: "us-east-1"
+  client = undefined
+
+  proxy = ( command ) -> 
+    ( parameters = {} ) -> client.send new command parameters
+
+  N = {}
+  for key, value of M
+    if key.endsWith "Command"
+      name = key
+        .replace /Command$/, ""
+        .replace /^[A-Z]/, (c) -> c.toLowerCase()
+      N[ name ] = proxy value
+    else if key.endsWith "Client"
+      client = new value options
+  N
+
 turn = (nodes, state, context) ->
   for node in nodes
     if node.pattern == state.name || node.pattern.test? state.name
@@ -26,5 +45,6 @@ runNetwork = (nodes, state, context) ->
       return state.result
 
 export {
+  lift
   runNetwork
 }
