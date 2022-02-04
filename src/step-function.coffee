@@ -56,7 +56,9 @@ createStepFunction = ( name, dictionary, description ) ->
           StateMachineName: name
           StateMachineType: "STANDARD"
 
-  deployStack name, YAML.dump _template
+  deployStack "#{name}-sf", YAML.dump _template
+
+deleteStepFunction = ( name ) -> deleteStack "#{name}-sf"
 
 getStepFunction = (name) ->
   { stateMachines } = await AWS.StepFunction.listStateMachines()
@@ -66,14 +68,18 @@ getStepFunction = (name) ->
     arn: machine.stateMachineArn
     name: machine.name
 
+hasStepFunction = ( name ) -> ( await getStepFunction name )?
+
+getStepFunctionARN = (name) -> ( await getStepFunction name )?.arn
+
 startStepFunction = (name) ->
-  if ( arn = ( await getStepFunction name )?.arn )?
+  if ( arn = await getStepFunctionARN name )?
     AWS.StepFunction.startExecution stateMachineArn: arn
   else
     throw new Error "Step Function [ #{ name } ] not found"
 
 haltStepFunction = (name) ->
-  if ( arn = ( await getStepFunction name )?.arn )?
+  if ( arn = await getStepFunctionARN name )?
     response = await AWS.StepFunction.listExecutions
       stateMachineArn: arn
       statusFilter: "RUNNING"
@@ -85,4 +91,12 @@ haltStepFunction = (name) ->
   else
     throw new Error "Step Function [ #{ name } ] not found"
 
-export { createStepFunction, haltStepFunction, startStepFunction }
+export {
+  createStepFunction
+  deleteStepFunction
+  getStepFunction
+  hasStepFunction
+  haltStepFunction
+  getStepFunctionARN
+  startStepFunction
+}
