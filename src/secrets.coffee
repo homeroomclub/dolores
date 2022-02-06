@@ -42,10 +42,16 @@ setSecret = (name, value) ->
     await manager.createSecret Name: name, SecretString: value
   secrets[name] = value
 
+deleteSecret = (name) ->
+  await manager.deleteSecret
+    SecretId: name
+    ForceDeleteWithoutRecovery: true
+
 export {
   hasSecret
   getSecret
   getSecretARN
   getSecretReference
   setSecret
+  deleteSecret
 }
