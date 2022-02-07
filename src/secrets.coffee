@@ -24,7 +24,14 @@ __getSecret = (_name) ->
   secret = await manager.getSecretValue SecretId: name
   if subName? 
     secret = { secret... }
-    secret.SecretString = ( JSON.parse secret.SecretString )[subName]
+    try
+      bundle = JSON.parse secret.SecretString
+    catch _error
+      error = new Error "Unable to parse JSON for secrets bundle [ #{name} ],
+        using reference [ #{_name} ]"
+      error._error = _error
+      throw error
+    secret.SecretString = bundle?[subName]
   secret
 
 # TODO replace this primitive expiry mechanism with a means to message lambdas?
