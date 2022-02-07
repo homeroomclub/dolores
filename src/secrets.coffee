@@ -23,6 +23,7 @@ __getSecret = (_name) ->
   [ name, subName ] = parseSecretName _name
   secret = await manager.getSecretValue SecretId: name
   if subName? 
+    secret = { secret... }
     secret.SecretString = ( JSON.parse secret.SecretString )[subName]
   secret
 
