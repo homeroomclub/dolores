@@ -1,6 +1,7 @@
 import { SecretsManager } from "@aws-sdk/client-secrets-manager"
 
-manager = new SecretsManager region: "us-east-1"
+region =  "us-east-1"
+manager = new SecretsManager { region }
 secrets = {}
 
 parseSecretName = (name) ->
@@ -51,6 +52,9 @@ getSecret = (name) ->
 getSecretARN = (name) ->
   { ARN } = await _getSecret name
   ARN
+
+getWildcardARN = (name) -> 
+  "arn:aws:secretsmanager:#{region}:*:secret:#{name}"
 
 getSecretReference = (name) ->
   { VersionId } = await _getSecret name
@@ -105,6 +109,7 @@ export {
   hasSecret
   getSecret
   getSecretARN
+  getWildcardARN
   getSecretReference
   setSecret
   deleteSecret
