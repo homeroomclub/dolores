@@ -10,7 +10,7 @@ AWS =
   StepFunction: lift StepFunction
   STS: lift STS
 
-createStepFunction = ( name, dictionary, description ) ->
+createStepFunction = ({ name, dictionary, resources, description }) ->
   account = ( await AWS.STS.getCallerIdentity() ).Account
   # TODO make the region dynamic?
   arn = "arn:aws:states:us-east-1:#{account}:stateMachine:#{name}"
@@ -37,11 +37,30 @@ createStepFunction = ( name, dictionary, description ) ->
               Statement: [
                   Effect: "Allow"
                   Action: [ "lambda:InvokeFunction" ]
-                  Resource: Object.values dictionary
+                  Resource: resources.lambdas
                 ,
                   Effect: "Allow"
-                  Action: [ "states:startExecution" ]
-                  Resource: arn
+                  Action: [ 
+                    "states:startExecution" 
+                  ]
+                  Resource: [ arn, resources.stepFunctions... ]
+                ,
+                  Effect: "Allow"
+                  Action:[
+                    "states:DescribeExecution"
+                    "states:StopExecution"
+                  ]
+                  Resource: '*'
+                ,
+                  Effect: "Allow"
+                  Action:[
+                    "events:PutTargets"
+                    "events:PutRule"
+                    "events:DescribeRule"
+                  ]
+                  Resource: [
+                    "arn:aws:events:us-east-1:618441030511:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule"
+                  ]
               ]
           ]
       StateMachine:
