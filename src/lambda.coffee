@@ -1,12 +1,13 @@
 import Crypto from "crypto"
-import { Lambda } from "@aws-sdk/client-lambda"
-import { S3 } from "@aws-sdk/client-s3"
+import * as Lambda from "@aws-sdk/client-lambda"
+import * as S3 from "@aws-sdk/client-s3"
 import * as Text from "@dashkite/joy/text"
 import * as Time from "@dashkite/joy/time"
+import { lift } from "./helpers"
 
 AWS =
-  Lambda: new Lambda region: "us-east-1"
-  S3: new S3 region: "us-east-1"
+  Lambda: lift Lambda
+  S3: lift S3
 
 md5 = (buffer) ->
   Crypto.createHash('md5').update(buffer).digest("base64")
@@ -134,6 +135,20 @@ versionLambda = (name) ->
 deleteLambda = (name) ->
   AWS.Lambda.deleteFunction FunctionName: name
 
+_invokeLambda = (name, sync, input) ->
+  parameters = if input?
+    FunctionName: name
+    Payload: JSON.stringify input
+    InvocationType: if sync then "RequestResponse" else "Event"
+  else
+    FunctionName: name
+    InvocationType: if sync then "RequestResponse" else "Event"
+
+  AWS.Lambda.invoke parameters
+
+invokeLambda = (name, input) -> _invokeLambda name, false, input
+syncInvokeLambda = (name, input) -> _invokeLambda name, true, input
+
 export {
   hasLambda
   getLambda
@@ -145,4 +160,6 @@ export {
   publishLambda
   versionLambda
   deleteLambda
+  invokeLambda
+  syncInvokeLambda
 }

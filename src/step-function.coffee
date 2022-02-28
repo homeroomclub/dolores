@@ -72,9 +72,16 @@ hasStepFunction = ( name ) -> ( await getStepFunction name )?
 
 getStepFunctionARN = (name) -> ( await getStepFunction name )?.arn
 
-startStepFunction = (name) ->
+startStepFunction = (name, input) ->
   if ( arn = await getStepFunctionARN name )?
-    AWS.StepFunction.startExecution stateMachineArn: arn
+    parameters = if input?
+      stateMachineArn: arn
+      input: JSON.stringify input
+    else
+      stateMachineArn: arn
+
+    AWS.StepFunction.startExecution parameters
+
   else
     throw new Error "Step Function [ #{ name } ] not found"
 
