@@ -44,7 +44,19 @@ runNetwork = (nodes, state, context) ->
     if state.result?
       return state.result
 
+# From joy's partition.
+partition = (n, i) ->
+  batch = []
+  for x from i
+    batch.push x
+    if batch.length == n
+      yield batch
+      batch = []
+  if batch.length > 0
+    yield batch
+
 export {
   lift
   runNetwork
+  partition
 }
