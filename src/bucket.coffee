@@ -56,7 +56,13 @@ getObject = (name, key, encoding="utf8") ->
     if encoding == "binary"
       Body
     else
-      Body.toString encoding
+      new Promise (resolve, reject) ->
+        Body.setEncoding encoding
+        output = ""
+        Body.on "data", (chunk) -> output += chunk
+        Body.on "error", (error) -> reject error
+        Body.on "end", -> resolve output
+
   catch e
     rescueNotFound error
     null
