@@ -6,7 +6,8 @@ AWS =
   S3: lift S3
 
 rescueNotFound = (error) ->
-  if ! ( error?.$response?.statusCode in [ 403, 404 ] )
+  code = error?.$response?.statusCode ? error.$metadata.httpStatusCode
+  if ! ( code in [ 403, 404 ] )
     throw error
 
 hasBucket = (name) ->
@@ -37,7 +38,7 @@ putBucketLifecycle = (name, lifecycle) ->
     LifecycleConfiguration: lifecycle
 
 deleteBucketLifecycle = (name) ->
-  await AWS.S3.deleteBucketLifecycleConfiguration Bucket: name
+  await AWS.S3.deleteBucketLifecycle Bucket: name
 
 
 headObject = (name, key) ->
