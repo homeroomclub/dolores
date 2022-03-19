@@ -75,8 +75,8 @@ getLambdaARN = getLatestLambdaARN
 defaults =
   bucket: "dolores.dashkite.com"
   role: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  memory: 3000
-  timeout: 30
+  memory: 128 # max size for edge lambdas
+  timeout: 5 # max timeout for edge lambdas
   handler: "build/lambda/index.handler"
   runtime: "nodejs14.x"
 
