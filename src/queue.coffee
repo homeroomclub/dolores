@@ -5,7 +5,9 @@ import * as Type from "@dashkite/joy/type"
 import { lift } from "./helpers"
 
 createStepFunction = ({ name, dictionary, resources, description }) ->
-  
+
+cache =
+  account: null
 
 AWS =
   SQS: lift SQS
@@ -14,7 +16,8 @@ AWS =
 region = "us-east-1"
 
 getQueueARN = (name) ->
-  account = ( await AWS.STS.getCallerIdentity() ).Account
+  account = await do ->
+    cache.account ?= ( await AWS.STS.getCallerIdentity() ).Account
   "arn:aws:sqs:#{region}:#{account}:#{name}.fifo"
 
 _createQueue = (name, options) ->
@@ -48,11 +51,7 @@ getQueueURL = (name) ->
 #   and require a delete-create cycle (~60s) to perform an effective update.
 putQueue = (name, options) ->
   if !( await getQueueURL name )?
-    console.log "creating..."
     await createQueue name, options
-  else
-    console.log "queue already exists"
-    console.log await getQueueURL name
 
 # AWS indicates this can take 60 seconds to complete.
 emptyQueue = (name) ->
@@ -134,7 +133,3 @@ export {
   pushMessage
   popMessages
 }
-
-
-
-
