@@ -64,7 +64,7 @@ getObject = (name, key, encoding="utf8") ->
         Body.on "error", (error) -> reject error
         Body.on "end", -> resolve output
 
-  catch e
+  catch error
     rescueNotFound error
     null
 
