@@ -55,7 +55,7 @@ hasObject = (name, key) ->
 
 getObject = ( name, key ) ->
   try
-    object = await AWS.S3.getObject Bucket: name, Key: key
+    await AWS.S3.getObject Bucket: name, Key: key
   catch error
     rescueNotFound error
     null
