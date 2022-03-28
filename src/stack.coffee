@@ -1,6 +1,8 @@
 import { CloudFormation } from "@aws-sdk/client-cloudformation"
 import * as Time from "@dashkite/joy/time"
 import { runNetwork } from "./helpers"
+import YAML from "js-yaml"
+import * as Type from "@dashkite/joy/type"
 
 AWS =
   CloudFormation: new CloudFormation region: "us-east-1"
@@ -70,6 +72,11 @@ nodes = [
 
 deployStack = (name, template, capabilities) ->
 
+  capabilities ?= [ "CAPABILITY_IAM" ]
+
+  if Type.isObject template
+    template = YAML.dump template
+
   console.log template
 
   state = name: "start"
@@ -78,7 +85,7 @@ deployStack = (name, template, capabilities) ->
     name: name
     template: 
       StackName: name
-      Capabilities: capabilities ? [ "CAPABILITY_IAM" ]
+      Capabilities: capabilities
       # Tags: [{
       #   Key: "domain"
       #   Value: configuration.tld
