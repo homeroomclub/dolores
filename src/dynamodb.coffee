@@ -6,16 +6,20 @@ AWS =
 
 region = "us-east-1"
 
-hasTable = (name) ->
+getTable = (name) ->
   try
-    result = await AWS.DynamoDB.describeTable TableName: name
-    console.log result
-    true
+    await AWS.DynamoDB.describeTable TableName: name
   catch error
     if /ResourceNotFoundException/.test error.toString()
-      false
+      null
     else
       throw error
+
+hasTable = (name) ->
+  if ( await getTable name )?
+    true
+  else
+    false
 
 getTableARN = (name) ->
   "arn:aws:dynamodb:#{region}:*:table/#{name}"
@@ -28,6 +32,7 @@ deleteTable = (name) ->
     AWS.S3.deleteBucket TableName: name
 
 export {
+  getTable
   hasTable
   getTableARN
   createTable

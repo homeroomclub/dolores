@@ -93,6 +93,20 @@ deployStack = (name, template, capabilities) ->
     else
       throw error
 
+deployStackAsync = (name, _template, capabilities) ->
+  console.log _template
+
+  template =
+    StackName: name
+    Capabilities: capabilities ? [ "CAPABILITY_IAM" ]
+    TemplateBody: _template
+
+  if await hasStack name
+    AWS.CloudFormation.updateStack template
+  else
+    AWS.CloudFormation.createStack template
+    
+
 deleteStack = (name) ->
   AWS.CloudFormation.deleteStack StackName: name
 
@@ -100,5 +114,6 @@ export {
   hasStack
   getStack
   deployStack
+  deployStackAsync
   deleteStack
 }
