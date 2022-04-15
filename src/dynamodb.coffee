@@ -8,7 +8,8 @@ region = "us-east-1"
 
 getTable = (name) ->
   try
-    await AWS.DynamoDB.describeTable TableName: name
+    { Table } = await AWS.DynamoDB.describeTable TableName: name
+    Table
   catch error
     if /ResourceNotFoundException/.test error.toString()
       null
@@ -29,7 +30,7 @@ createTable = (configuration) ->
 
 deleteTable = (name) ->
   if await hasTable name
-    AWS.S3.deleteBucket TableName: name
+    AWS.DynamoDB.deleteTable TableName: name
 
 export {
   getTable
