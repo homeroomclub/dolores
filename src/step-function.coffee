@@ -59,7 +59,7 @@ createStepFunction = ({ name, dictionary, resources, description }) ->
                     "events:DescribeRule"
                   ]
                   Resource: [
-                    "arn:aws:events:us-east-1:618441030511:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule"
+                    "arn:aws:events:us-east-1:#{account}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule"
                   ]
               ]
           ]
