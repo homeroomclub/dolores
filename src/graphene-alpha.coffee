@@ -137,7 +137,7 @@ scan = ({ database, collection, filter, token }) ->
     h.resource "items"
     h.method "get"
     h.parameters { database, collection, filter: _, token }
-  ]
+  ] 
   try
     response = await request.issue()
     list: ( ( Item.create _ ) for _ in response.json.list )
@@ -146,6 +146,24 @@ scan = ({ database, collection, filter, token }) ->
     if error.status?
       throw new Error "graphene: scan failed with status
         #{ error.status } for [ #{database} ][ #{collection} ]"
+    else
+      throw error
+
+incrementItem = ({ database, collection, key, increments }) ->
+  request = createRequest [
+    h.resource "increment"
+    h.method "post"
+    h.parameters { database, collection, key }
+    h.content { increments }
+  ]
+  try
+    await request.issue()
+  catch error
+    if error.status == 404
+      itemDeleted: false
+    else if error.status?
+      throw new Error "graphene: item increment failed with status
+        #{ error.status } for [ #{database} ][ #{collection} ][ #{key} ]"
     else
       throw error
 
@@ -197,7 +215,7 @@ deleteDatabase = ({ address }) ->
     if error.status == 404
       databaseDeleted: false
     else if error.status?
-      throw new Error "graphene: database get failed with status
+      throw new Error "graphene: database delete failed with status
         #{ error.status } for [ #{address} ]"
     else
       throw error
@@ -250,7 +268,7 @@ deleteCollection = ({ database, byname }) ->
     if error.status == 404
       collectionDeleted: false
     else if error.status?
-      throw new Error "graphene: database get failed with status
+      throw new Error "graphene: database delete failed with status
         #{ error.status } for [ #{address} ]"
     else
       throw error
@@ -278,7 +296,8 @@ publishCollection = ({ database, byname, name, views }) ->
 
 export { 
   Item
-  getItem, putItem, deleteItem 
+  getItem, putItem, deleteItem,
+  scan, incrementItem
   createDatabase, getDatabase, deleteDatabase
   upsertCollection, getCollection, deleteCollection, waitCollection, publishCollection
 }
