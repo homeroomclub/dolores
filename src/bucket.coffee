@@ -1,5 +1,7 @@
 import * as S3 from "@aws-sdk/client-s3"
 import { lift, partition } from "./helpers"
+import { generic } from "@dashkite/joy/generic"
+import { isString, isObject } from "@dashkite/joy/type"
 
 
 AWS =
@@ -51,22 +53,36 @@ headObject = (name, key) ->
 hasObject = (name, key) ->
   if ( await headObject name, key )? then true else false
 
-getObject = (name, key, encoding="utf8") ->
+getObject = ( name, key ) ->
   try
-    {Body} = await AWS.S3.getObject Bucket: name, Key: key
-    if encoding == "binary"
-      Body
-    else
-      new Promise (resolve, reject) ->
-        Body.setEncoding encoding
-        output = ""
-        Body.on "data", (chunk) -> output += chunk
-        Body.on "error", (error) -> reject error
-        Body.on "end", -> resolve output
-
+    await AWS.S3.getObject Bucket: name, Key: key
   catch error
     rescueNotFound error
     null
+
+isS3Object = (value) -> ( isObject value ) && value.Body?
+
+streamObject = generic name: "streamObject"
+
+generic streamObject, isS3Object, isString, ( { Body }, encoding ) ->
+  if encoding == "binary"
+    Body
+  else
+    new Promise (resolve, reject) ->
+      Body.setEncoding encoding
+      output = ""
+      Body.on "data", (chunk) -> output += chunk
+      Body.on "error", (error) -> reject error
+      Body.on "end", -> resolve output
+
+generic streamObject, isS3Object, ( object ) ->
+  streamObject object, "utf8"
+
+generic streamObject, isString, isString, isString, ( name, key, encoding ) ->
+  streamObject ( await getObject name, key ), encoding
+
+generic streamObject, isString, isString, ( name, key ) ->
+  streamObject await getObject name, key
 
 putObject = (parameters) ->
   AWS.S3.putObject parameters
@@ -129,6 +145,7 @@ export {
   headObject
   hasObject
   getObject
+  streamObject
   putObject
   deleteObject
   deleteObjects
