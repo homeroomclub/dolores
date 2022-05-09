@@ -149,6 +149,41 @@ _invokeLambda = (name, sync, input) ->
 invokeLambda = (name, input) -> _invokeLambda name, false, input
 syncInvokeLambda = (name, input) -> _invokeLambda name, true, input
 
+listSources = (name) ->
+  results = []
+  next = undefined
+  while true
+    result = await AWS.Lambda.listEventSourceMappings
+      FunctionName: name
+      Marker: next
+
+    { EventSourceMappings, NextMarker } = result
+
+    next = NextMarker
+    results.push EventSourceMappings...
+    if !next?
+      return results
+
+deleteSource = (source) ->
+  await AWS.Lambda.deleteEventSourceMapping UUID: source.UUID
+
+deleteSources = (name) ->
+  sources = await listSources name
+  for source in sources
+    await deleteSource source
+
+createSource = (source) ->
+  await AWS.Lambda.createEventSourceMapping source
+
+createSources = (sources) ->
+  for source in sources
+    await createSource source
+
+putSources = (name, sources) ->
+  await deleteSources name
+  await createSources sources
+  
+
 export {
   hasLambda
   getLambda
@@ -162,4 +197,10 @@ export {
   deleteLambda
   invokeLambda
   syncInvokeLambda
+  listSources
+  deleteSources
+  deleteSource
+  createSources
+  createSource
+  putSources
 }

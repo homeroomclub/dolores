@@ -50,6 +50,7 @@
     "@aws-sdk/client-secrets-manager": "^3.42.0",
     "@aws-sdk/client-sfn": "^3.49.0",
     "@aws-sdk/client-sqs": "^3.54.0",
+    "@dashkite/bake": "^0.0.6",
     "js-yaml": "^4.1.0",
     "mime-types": "^2.1.35",
     "node-fetch": "^2.6.7",

@@ -1,4 +1,5 @@
 import * as Kinesis from "@aws-sdk/client-kinesis"
+import * as STS from "@aws-sdk/client-sts"
 import { lift, partition } from "./helpers"
 
 cache =
@@ -10,47 +11,59 @@ AWS =
 
 region = "us-east-1"
 
-rescueNotFound = (error) ->
-  code = error?.$response?.statusCode ? error.$metadata.httpStatusCode
-  if ! ( code in [ 403, 404 ] )
-    throw error
-
-getStreamARN = (name) ->
+getStreamARN = (stream) ->
   account = await do ->
     cache.account ?= ( await AWS.STS.getCallerIdentity() ).Account
-  "arn:aws:kinesis:#{region}:#{account}:stream/#{name}"
+  "arn:aws:kinesis:#{region}:#{account}:stream/#{stream}"
 
-getStream = (name) ->
+getStream = (stream) ->
   try
     { StreamDescriptionSummary: _ } = 
-      await AWS.Kinesis.describeStreamSummary StreamName: name
+      await AWS.Kinesis.describeStreamSummary StreamName: stream
     _: _
     arn: _.StreamARN
     status: _.StreamStatus
   catch error
-    console.log error
-    null
+    if /ResourceNotFoundException/.test error.toString()
+      undefined
+    else
+      throw error
 
-hasStream = (name) ->
-  if ( await getStream name )?
+hasStream = (stream) ->
+  if ( await getStream stream )?
     true
   else
     false
 
-putStream = (name) ->
-  if !( await hasStream name )
+putStream = (stream) ->
+  if !( await hasStream stream )
     await AWS.Kinesis.createStream 
-      StreamName: name
-      StreamModeDetails: "ON_DEMAND"
+      StreamName: stream
+      StreamModeDetails: 
+        StreamMode: "ON_DEMAND"
 
-deleteStream = (name) ->
-  if await hasStream name
-    await AWS.Kinesis.deleteStream StreamName: name
+deleteStream = (stream) ->
+  if await hasStream stream
+    await AWS.Kinesis.deleteStream StreamName: stream
 
-addRecord = (name) ->
-  await AWS.Kinesis.putRecordInput 
-    StreamName: name
+addRecord = ({ stream, partition, data }) ->
+  await AWS.Kinesis.putRecord 
+    StreamName: stream
+    PartitionKey: partition
+    Data: Buffer.from ( JSON.stringify data ), "utf8"
 
+listConsumers = (stream) ->
+  results = []
+  next = undefined
+  while true
+    { Consumers, NextToken } = await AWS.Kinesis.listStreamConsumers
+      StreamARN: stream.arn
+      NextToken: next
+
+    next = NextToken
+    results.push Consumers...
+    if !next?
+      return results
 
 export {
   getStreamARN
@@ -58,4 +71,6 @@ export {
   hasStream
   putStream
   deleteStream
+  addRecord
+  listConsumers
 }
