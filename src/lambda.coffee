@@ -70,7 +70,11 @@ getLatestLambda = (name) ->
     version: max
 
 getLatestLambdaARN = (name) -> ( await getLatestLambda name ).arn
+
 getLambdaARN = getLatestLambdaARN
+
+getLambdaUnqualifiedARN = (name) ->
+  ( ( ( await getLambdaARN name ).split ":" )[..-2] ).join ":"
 
 defaults =
   bucket: "dolores.dashkite.com"
@@ -78,7 +82,7 @@ defaults =
   memory: 128 # max size for edge lambdas
   timeout: 5 # max timeout for edge lambdas
   handler: "build/lambda/index.handler"
-  runtime: "nodejs14.x"
+  runtime: "nodejs16.x"
 
 publishLambda = (name, data, configuration) ->
 
@@ -192,6 +196,7 @@ export {
   getLatestLambda
   getLatestLambdaARN
   getLambdaARN
+  getLambdaUnqualifiedARN
   publishLambda
   versionLambda
   deleteLambda
