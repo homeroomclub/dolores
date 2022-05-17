@@ -6,7 +6,10 @@ import { deployStack, deleteStack } from "./stack"
 
 createRule = ({ name, target, schedule }) ->
   # TODO possibly use API directly for creating rules
-  # so we don't exhaust our stack quota
+  # so we don't exhaust our stack quota.
+
+  # we need to add some specificity to this function's interface.
+
   _template =
     AWSTemplateFormatVersion: "2010-09-09"
     Description: "Create rule [ #{name} ]"
