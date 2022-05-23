@@ -278,7 +278,7 @@ publishCollection = ({ database, byname, name, views }) ->
 
 export { 
   Item
-  getItem, putItem, deleteItem 
+  getItem, putItem, deleteItem, scan
   createDatabase, getDatabase, deleteDatabase
   upsertCollection, getCollection, deleteCollection, waitCollection, publishCollection
 }

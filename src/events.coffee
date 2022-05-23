@@ -31,7 +31,6 @@ createRule = ({ name, target, schedule }) ->
           SourceArn:
             "Fn::GetAtt": [ "Event" , "Arn" ]
 
-
   await deployStack name, YAML.dump _template
 
   undefined

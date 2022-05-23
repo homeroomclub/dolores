@@ -31,7 +31,7 @@ createQueue = (name, options = {}) ->
   defaults = 
     FifoQueue: true
     ReceiveMessageWaitTimeSeconds: 20
-    ContentBasedDeduplication: true
+    # ContentBasedDeduplication: true
 
   _createQueue name, Obj.merge defaults, options
 
