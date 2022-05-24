@@ -140,13 +140,12 @@ deleteLambda = (name) ->
   AWS.Lambda.deleteFunction FunctionName: name
 
 _invokeLambda = (name, sync, input) ->
-  parameters = if input?
-    FunctionName: name
-    Payload: JSON.stringify input
-    InvocationType: if sync then "RequestResponse" else "Event"
-  else
-    FunctionName: name
-    InvocationType: if sync then "RequestResponse" else "Event"
+  parameters = FunctionName: name
+  parameters.InvocationType = if sync then "RequestResponse" else "Event"
+
+  if input?
+    parameters.Payload = JSON.stringify input
+
 
   AWS.Lambda.invoke parameters
 
