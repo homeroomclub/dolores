@@ -53,10 +53,12 @@ getLambdaVersion = (name, version) ->
   undefined
 
 getLatestLambda = (name) ->
+  console.log "NAME", name
   { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
   result = undefined
   max = 0
   for current in Versions
+    console.log "Version:", current.Version
     if current.Version != "$LATEST"
       version = Text.parseNumber current.Version
       if version >= max
@@ -131,6 +133,17 @@ publishLambda = (name, data, configuration) ->
     waitForReady name
 
 versionLambda = (name) ->
+  { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
+  count = 0
+  for version in Versions
+    if Versions.length - count < 10
+      break
+    if version.Version != "$LATEST"
+      await AWS.Lambda.deleteFunction 
+        FunctionName: name
+        Qualifier: version.Version
+      count++
+
   result = await AWS.Lambda.publishVersion FunctionName: name
   _: result
   arn: result.FunctionArn
