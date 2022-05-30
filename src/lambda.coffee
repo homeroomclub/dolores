@@ -134,15 +134,23 @@ publishLambda = (name, data, configuration) ->
 
 versionLambda = (name) ->
   { Versions }  = await AWS.Lambda.listVersionsByFunction FunctionName: name
-  count = 0
-  for version in Versions
-    if Versions.length - count < 10
-      break
-    if version.Version != "$LATEST"
-      await AWS.Lambda.deleteFunction 
-        FunctionName: name
-        Qualifier: version.Version
-      count++
+  # delete old versions so we don't go past the pagination limit
+  if Versions.length > 10 # limit is 50, but we're being conservative
+    versions = Versions
+      .map ({ Version }) -> Version
+      .filter ( version ) -> version != "$LATEST"
+      .map  (version ) -> Text.parseNumber version
+      .sort()
+      .slice 0, 9
+      # .each ( version ) ->
+      #   try
+      #     await AWS.Lambda.deleteFunction 
+      #       FunctionName: name
+      #       Qualifier: version
+      #   catch error
+      #     console.warn "error attempting to purge older Lambdas"
+      #     console.warn "failed to delete Lambda [#{name}] version [#{version}]"
+      #     console.error error
 
   result = await AWS.Lambda.publishVersion FunctionName: name
   _: result

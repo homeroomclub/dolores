@@ -1,6 +1,7 @@
 import { getSecret } from "./secrets"
 import * as Meta from "@dashkite/joy/metaclass"
 import * as Fn from "@dashkite/joy/function"
+import * as Time from "@dashkite/joy/time"
 import fetch from "node-fetch"
 import discover from "panda-sky-client"
 import Mime from "mime-types"
@@ -257,17 +258,20 @@ deleteCollection = ({ database, byname }) ->
 
 waitCollection = ({ database, byname }) ->
   collection = await getCollection { database, byname }
+  wait = 5000 # 5 seconds
+  timeout = wait * 12 # 1 minute
   count = 0
-  while true
-    if count++ > 5
-      throw new Error "graphene: collection [ #{database} ][ #{byname} ] failed to stabilize"
-    else if !collection?
-      throw new Error "graphene: collection [ #{database} ][ #{byname} ] is not found"
-    else if collection.status != "ready"
-      count++
-      await Time.sleep 5000
-    else
-      return collection
+  while collection?.status != "ready"
+    if (( count++ * wait ) >= timeout )
+      throw new Error "graphene: create collection 
+        [ #{database} ][ #{byname} ] not ready
+        after #{count} retries"
+    await Time.sleep wait
+    if !(collection = await getCollection { database, byname })?
+      throw new Error "graphene: create collection 
+        [ #{database} ][ #{byname} ]
+        failed for an unknown reason"
+  collection
 
 publishCollection = ({ database, byname, name, views }) ->
   await upsertCollection { database, byname, name, views }
