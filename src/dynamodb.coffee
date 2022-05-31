@@ -28,14 +28,22 @@ getTableARN = (name) ->
 createTable = (configuration) ->
   AWS.DynamoDB.createTable configuration
 
+updateTable = ( configuration ) ->
+  AWS.DynamoDB.updateTable configuration
+
 deleteTable = (name) ->
   if await hasTable name
     AWS.DynamoDB.deleteTable TableName: name
+
+setTableTTL = ( configuration ) ->
+  AWS.DynamoDB.updateTimeToLive configuration
 
 export {
   getTable
   hasTable
   getTableARN
   createTable
+  updateTable
   deleteTable
+  setTableTTL
 }
