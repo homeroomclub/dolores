@@ -1,4 +1,5 @@
 import * as S3 from "@aws-sdk/client-s3"
+import * as Type from "@dashkite/joy/type"
 import { lift, partition } from "./helpers"
 
 
@@ -51,25 +52,27 @@ headObject = (name, key) ->
 hasObject = (name, key) ->
   if ( await headObject name, key )? then true else false
 
-getObject = (name, key, encoding="utf8") ->
+getObject = (name, key) ->
   try
-    {Body} = await AWS.S3.getObject Bucket: name, Key: key
-    if encoding == "binary"
-      Body
-    else
-      new Promise (resolve, reject) ->
-        Body.setEncoding encoding
-        output = ""
-        Body.on "data", (chunk) -> output += chunk
-        Body.on "error", (error) -> reject error
-        Body.on "end", -> resolve output
-
+    { Key, Body } = await AWS.S3.getObject Bucket: name, Key: key
+    key: key
+    content: await do ->
+      if Type.isString Body
+        Body
+      else
+        result = []
+        for await data from Body
+          result = Uint8Array.from [ result..., data... ]
+        result
   catch error
     rescueNotFound error
     null
 
-putObject = (parameters) ->
-  AWS.S3.putObject parameters
+putObject = (name, key, body) ->
+  AWS.S3.putObject
+    Bucket: name
+    Key: key
+    Body: body
 
 deleteObject = (name, key) ->
   if await hasObject name, key
@@ -96,12 +99,13 @@ listObjects = (name, prefix, items=[], token) ->
     Contents
     NextContinuationToken
   } = await AWS.S3.listObjectsV2 parameters
-  
+
+  if Contents?
+    items = [ items..., Contents... ]
   if IsTruncated
-    items = items.concat Contents
     await listObjects name, prefix, items, NextContinuationToken
   else
-    items.concat Contents
+    items
 
 deleteDirectory = (name, prefix) ->
   keys = []
