@@ -54,17 +54,19 @@ hasObject = (name, key) ->
 
 getObject = (name, key) ->
   try
-    { Key, Body } = await AWS.S3.getObject Bucket: name, Key: key
+    { Key, ETag, Body } = await AWS.S3.getObject Bucket: name, Key: key
     key: key
+    hash: ETag.replace /"/g, ""
     content: await do ->
       if Type.isString Body
         Body
       else
         result = []
         for await data from Body
-          result = Uint8Array.from [ result..., data... ]
-        result
+          result = [ result..., data... ]
+        Uint8Array.from result
   catch error
+    console.error error
     rescueNotFound error
     null
 
