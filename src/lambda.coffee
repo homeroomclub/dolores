@@ -142,16 +142,15 @@ versionLambda = (name) ->
       .map  (version ) -> Text.parseNumber version
       .sort()
       .slice 0, 9
-      # .each ( version ) ->
-      #   try
-      #     await AWS.Lambda.deleteFunction 
-      #       FunctionName: name
-      #       Qualifier: version
-      #   catch error
-      #     console.warn "error attempting to purge older Lambdas"
-      #     console.warn "failed to delete Lambda [#{name}] version [#{version}]"
-      #     console.error error
-
+      .forEach ( version ) ->
+        try
+          await AWS.Lambda.deleteFunction 
+            FunctionName: name
+            Qualifier: "#{version}"
+        catch error
+          console.warn "error attempting to purge older Lambdas"
+          console.warn "failed to delete Lambda [#{name}] version [#{version}]"
+          console.error error
   result = await AWS.Lambda.publishVersion FunctionName: name
   _: result
   arn: result.FunctionArn
