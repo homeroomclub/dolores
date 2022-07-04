@@ -175,8 +175,16 @@ deleteSources = (name) ->
   for source in sources
     await deleteSource source
 
-createSource = (source) ->
+_createSource = (source) ->
   await AWS.Lambda.createEventSourceMapping source
+
+createSource = (source, duration = 125) ->
+  try
+    await _createSource source
+  catch
+    duration *= 2
+    await Time.sleep duration
+    await createSource source, duration
 
 createSources = (sources) ->
   for source in sources

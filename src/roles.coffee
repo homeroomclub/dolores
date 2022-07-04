@@ -66,5 +66,6 @@ export {
   createRole
   hasRole
   getRole
+  deleteRole
   getRoleARN
 }
