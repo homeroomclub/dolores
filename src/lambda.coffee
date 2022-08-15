@@ -97,7 +97,6 @@ publishLambda = (name, data, configuration) ->
     timeout
     environment
   } = { defaults..., configuration... }
-
   _configuration =
     FunctionName: name
     Handler: handler
