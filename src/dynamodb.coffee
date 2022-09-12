@@ -29,9 +29,14 @@ generic wrap, Type.isString, ( text ) -> S: text
 
 generic wrap, Type.isBoolean, ( boolean ) -> BOOL: boolean
 
-wrapItem = ( object ) -> ( wrap object ).M
+wrapItem = ( object ) ->
+  result = {}
+  ( result[ key ] = wrap value ) for key, value of object
+  result
 
 unwrap = generic name: "unwrap"
+
+generic unwrap, Type.isUndefined, -> null
 
 generic unwrap, Type.isObject, ( object ) ->
   result = {}
@@ -49,12 +54,12 @@ generic unwrap, Type.isString, Type.isString, (-> true), ( key, type, value ) ->
     when "NULL" then null
     else throw new Error "Unable to map DynamoDB attribute type: #{type}"
 
-generic unwrap, Type.isString, Type.isString, Type.isArray, ( key, type, value ) ->
+generic unwrap, Type.isString, Type.isString, Type.isArray, ( key, type, array ) ->
   result = []
-  ( result.push unwrap key, description ) for key, description of object
+  ( result.push unwrap description ) for description in array
   result
 
-generic unwrap, Type.isString, Type.isString, Type.isObject, ( key, type, value ) ->
+generic unwrap, Type.isString, Type.isString, Type.isObject, ( key, type, object ) ->
   result = {}
   ( result[ key ] = unwrap key, description ) for key, description of object
   result
@@ -122,24 +127,27 @@ query = ( query ) ->
       Statement: query
       NextToken
     }
-    yield item for item in Items
+    ( yield unwrap item ) for item in Items
     if NextToken? then continue else break
+  undefined
 
 getItem = ( table, key ) ->
-  AWS.DynamoDB.getItem { TableName: table, options... }
+  response = await AWS.DynamoDB.getItem
+    TableName: table
+    Key: wrapItem key
+  if response.$metadata.httpStatusCode == 200
+    unwrap response.Item
+  else throw new Error "getItem failed with status 
+    #{ response.$metadata.httpStatusCode }"
 
-updateItem = ( table, key, value ) ->
+updateItem = generic name: "updateItem"
+
+generic updateItem, Type.isString, Type.isObject, Type.isObject, ( table, key, value ) ->
   value = do ->
     r = {}
     ( r[ k ] = v ) for k, v of value when !key[k]?
     r
 
-  console.log "updateItem",
-    TableName: table
-    Key: wrapItem key
-    ExpressionAttributeNames: expressionAttributeNames value
-    ExpressionAttributeValues: expressionAttributeValues value
-    UpdateExpression: updateExpression value
   AWS.DynamoDB.updateItem
     TableName: table
     Key: wrapItem key
@@ -147,8 +155,11 @@ updateItem = ( table, key, value ) ->
     ExpressionAttributeValues: expressionAttributeValues value
     UpdateExpression: updateExpression value
 
+generic updateItem, Type.isObject, ( options ) ->
+  AWS.DynamoDB.updateItem options
+
 deleteItem = ( table, key ) ->
-  AWS.DynamoDB.deleteItem TableName: table, Key: key
+  AWS.DynamoDB.deleteItem TableName: table, Key: wrapItem key
 
 export {
   wrap

@@ -106,8 +106,8 @@ publishLambda = (name, data, configuration) ->
     TracingConfig: Mode: "PassThrough"
     Role: role
 
-  # if environment?
-  #   _configuration.Environment = Variables: environment
+  if environment?
+    _configuration.Environment = Variables: environment
 
   if await hasLambda name
 
