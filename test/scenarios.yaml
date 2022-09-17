@@ -1,0 +1,47 @@
+DynamoDB:
+  wrap:
+    simple string: hello
+    simple object:
+      greeting: hello
+    shallow object:
+      title: Star Wars
+      year: 1977
+      director: George Lucas
+    nested object:
+      title: Star Wars
+      year: 1977
+      director:
+        name:
+          first: George
+          last: Lucas
+    simple array: [ foo, bar ]
+    nested array: [ foo, [ bar, baz ] ]
+    array with object:
+      - title: Star Wars
+        year: 1977
+        director: George Lucas
+      - title: The Empire Strikes Back
+        year: 1980
+        director: Irvin Kershner
+    object with array:
+      title: Star Wars
+      year: 1977
+      director: George Lucas
+      cast:
+        - Mark Hamill
+        - Harrison Ford
+        - Carrie Fisher
+    array with object with array:
+      - title: Star Wars
+        year: 1977
+        director: George Lucas
+        cast:
+          - Mark Hamill
+          - Harrison Ford
+          - Carrie Fisher
+      - title: The Empire Strikes Back
+        year: 1980
+        director: Irvin Kershner
+
+
+

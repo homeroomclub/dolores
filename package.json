@@ -35,6 +35,9 @@
   },
   "homepage": "https://github.com/dashkite/dolores#readme",
   "devDependencies": {
+    "@dashkite/amen": "^0.1.2",
+    "@dashkite/amen-console": "^0.0.1",
+    "@dashkite/assert": "^0.1.4",
     "@dashkite/genie": "^0.5.11",
     "@dashkite/genie-presets": "^0.5.7"
   },

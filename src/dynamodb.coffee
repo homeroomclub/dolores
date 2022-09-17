@@ -1,7 +1,7 @@
 import * as DynamoDB from "@aws-sdk/client-dynamodb"
 import { lift, partition } from "./helpers"
 import { generic } from "@dashkite/joy/generic"
-import * as Value from "@dashkite/joy/value"
+import * as Val from "@dashkite/joy/value"
 import * as Type from "@dashkite/joy/type"
 
 AWS =
@@ -34,35 +34,36 @@ wrapItem = ( object ) ->
   ( result[ key ] = wrap value ) for key, value of object
   result
 
-unwrap = generic name: "unwrap"
+unwrap = generic
+  name: "unwrap"
+  default: (args...) ->
+    console.log "unwrap", args...
+    throw new Error "unwrap: invalid arguments"
 
 generic unwrap, Type.isUndefined, -> null
 
-generic unwrap, Type.isObject, ( object ) ->
+generic unwrap, ( Val.eq "NULL" ), Type.isString, -> null
+
+generic unwrap, ( Val.eq "M" ), Type.isObject, ( type, object ) ->
   result = {}
-  ( result[ key ] = unwrap key, description ) for key, description of object
+  for key, description of object
+    result[ key ] = unwrap description
   result
 
-generic unwrap, Type.isString, Type.isObject, ( key, description ) ->
+generic unwrap, ( Val.eq "L" ), Type.isArray, ( type, array ) ->
+  ( unwrap description ) for description in array
+
+generic unwrap, ( Val.eq "BOOL" ), Type.isString, ( type, value ) -> value
+
+generic unwrap, ( Val.eq "N" ), Type.isString, ( type, value ) -> Number value
+
+generic unwrap, ( Val.eq "S" ), Type.isString, ( type, value ) -> value
+
+generic unwrap, Type.isObject, ( description ) ->
   [ [ type, value ] ] = Object.entries description
-  unwrap key, type, value
+  unwrap type, value
 
-generic unwrap, Type.isString, Type.isString, (-> true), ( key, type, value ) ->
-  switch type
-    when "S", "BOOL" then value
-    when "N" then Number value
-    when "NULL" then null
-    else throw new Error "Unable to map DynamoDB attribute type: #{type}"
-
-generic unwrap, Type.isString, Type.isString, Type.isArray, ( key, type, array ) ->
-  result = []
-  ( result.push unwrap description ) for description in array
-  result
-
-generic unwrap, Type.isString, Type.isString, Type.isObject, ( key, type, object ) ->
-  result = {}
-  ( result[ key ] = unwrap key, description ) for key, description of object
-  result
+unwrapItem = ( object ) -> unwrap "M", object
 
 updateExpression = ( object ) ->
   "SET " + ( Object.keys object
@@ -127,7 +128,7 @@ query = ( query ) ->
       Statement: query
       NextToken
     }
-    ( yield unwrap item ) for item in Items
+    ( yield unwrapItem item ) for item in Items
     if NextToken? then continue else break
   undefined
 
@@ -136,7 +137,8 @@ getItem = ( table, key ) ->
     TableName: table
     Key: wrapItem key
   if response.$metadata.httpStatusCode == 200
-    unwrap response.Item
+    if response.Item?
+      unwrapItem response.Item
   else throw new Error "getItem failed with status 
     #{ response.$metadata.httpStatusCode }"
 
@@ -165,6 +167,7 @@ export {
   wrap
   unwrap
   wrapItem
+  unwrapItem
   updateExpression
   expressionAttributeValues
   getTable
