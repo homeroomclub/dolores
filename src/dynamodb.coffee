@@ -42,7 +42,7 @@ unwrap = generic
 
 generic unwrap, Type.isUndefined, -> null
 
-generic unwrap, ( Val.eq "NULL" ), Type.isString, -> null
+generic unwrap, ( Val.eq "NULL" ), Type.isBoolean, -> null
 
 generic unwrap, ( Val.eq "M" ), Type.isObject, ( type, object ) ->
   result = {}

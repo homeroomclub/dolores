@@ -31,6 +31,10 @@ DynamoDB:
         - Mark Hamill
         - Harrison Ford
         - Carrie Fisher
+    object with null:
+      title: Star Wars
+      year: 1977
+      director: null
     array with object with array:
       - title: Star Wars
         year: 1977
