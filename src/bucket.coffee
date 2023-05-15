@@ -1,4 +1,5 @@
 import * as S3 from "@aws-sdk/client-s3"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { lift, partition } from "./helpers"
 import { generic } from "@dashkite/joy/generic"
 import { isString, isObject } from "@dashkite/joy/type"
@@ -130,6 +131,13 @@ deleteDirectory = (name, prefix) ->
 
 emptyBucket = (name) -> deleteDirectory name
 
+
+
+signGetObjectRequest = ({ bucket, key, region, expires }) ->
+  client = new S3.S3Client { region }
+  command = new S3.GetObjectCommand Bucket: bucket, Key: key
+  getSignedUrl client, command, expiresIn: expires
+
 export {
   getBucketARN
   hasBucket
@@ -150,4 +158,6 @@ export {
   deleteObject
   deleteObjects
   listObjects
+
+  signGetObjectRequest
 }
