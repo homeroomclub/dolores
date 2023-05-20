@@ -1,8 +1,11 @@
+import YAML from "js-yaml"
 import * as SQS from "@aws-sdk/client-sqs"
 import * as STS from "@aws-sdk/client-sts"
 import * as Obj from "@dashkite/joy/object"
 import * as Type from "@dashkite/joy/type"
+import * as Text from "@dashkite/joy/text"
 import { lift } from "./helpers"
+import * as Stack from "./stack"
 
 createStepFunction = ({ name, dictionary, resources, description }) ->
 
@@ -15,29 +18,14 @@ AWS =
 
 region = "us-east-1"
 
-getQueueARN = (name) ->
+nameStack = ( name ) -> "#{ Text.dashed name }-queue"
+
+getQueueARN = ( name ) ->
   account = await do ->
     cache.account ?= ( await AWS.STS.getCallerIdentity() ).Account
-  "arn:aws:sqs:#{region}:#{account}:#{name}.fifo"
+  "arn:aws:sqs:#{region}:#{account}:#{name}"
 
-_createQueue = (name, options) ->
-  AWS.SQS.createQueue
-    QueueName: name
-    Attributes: options
-
-# Dolores will be opinionated and always assume a FIFO queue.
-createQueue = (name, options = {}) ->
-  name = "#{name}.fifo"
-  defaults = 
-    FifoQueue: true
-    ReceiveMessageWaitTimeSeconds: 20
-    ContentBasedDeduplication: true
-
-  _createQueue name, Obj.merge defaults, options
-
-# Dolores will be opinionated and always assume a FIFO queue.
-getQueueURL = (name) ->
-  name = "#{name}.fifo"
+getQueueURL = ( name ) ->
   try
     { QueueUrl } = await AWS.SQS.getQueueUrl QueueName: name
     QueueUrl
@@ -49,24 +37,52 @@ getQueueURL = (name) ->
 
 # For now, this will be idempotent. Some aspects of queues cannot be updated
 #   and require a delete-create cycle (~60s) to perform an effective update.
-putQueue = (name, options) ->
-  if !( await getQueueURL name )?
-    await createQueue name, options
+putQueue = ( name, options ) ->
+  defaults =
+    QueueName: name
+    MessageRetentionPeriod: 345600  # 4 days
+    ReceiveMessageWaitTimeSeconds: 20
+
+  # These settings give us high-throughput FIFO by default
+  if name.endsWith ".fifo"
+    defaults.FifoQueue = true
+    defaults.ContentBasedDeduplication = true
+    defaults.DeduplicationScope = "messageGroup"
+    defaults.FifoThroughputLimit = "perMessageGroupId"
+
+  _template =
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: "Specify Queue [ #{name} ]"
+    Resources:
+      Queue:
+        Type: "AWS::SQS::Queue"
+        Properties: Obj.merge defaults, options
+
+  await Stack.deployStack ( nameStack name ), YAML.dump _template
+  
 
 # AWS indicates this can take 60 seconds to complete.
-emptyQueue = (name) ->
+emptyQueue = ( name ) ->
   if ( url = await getQueueURL name )?
     await AWS.SQS.purgeQueue QueueUrl: url
 
 # AWS indicates this can take 60 seconds to complete.
-deleteQueue = (name) ->
-  if ( url = await getQueueURL name )?
-    await AWS.SQS.deleteQueue QueueUrl: url
+deleteQueue = ( name ) ->
+  await Stack.deleteStack nameStack name
 
-pushMessage = (name, message, options) ->
-  if !(Type.isString message) || ( message.length == 0 )
-    throw new Error "dolores:queue: message must be a string with
-      minimum length 1."
+pushMessage = ( name, message, options ) ->
+  if !message?
+    throw new Error "dolores:queue cannot push undefined message"
+  
+  if (Type.isString message) && (message.length == 0)
+    throw new Error "dolores:queue message strings must have a minium length 1"
+
+  if Type.isObject message
+    message = JSON.stringify message
+
+  if !(Type.isString message)
+    throw new Error "dolores:queue unable to queue unknown message type"
+
 
   defaults =
     MessageGroupId: "DefaultMessageGroupID"
@@ -78,7 +94,7 @@ pushMessage = (name, message, options) ->
   else
     throw new Error "dolores:queue: the queue #{name} is not available"
 
-_receieveMessages = (url, options) ->
+_receieveMessages = ( url, options ) ->
   defaults = 
     AttributeNames: [ "All" ]
     MessageAttributeNames: [ "All" ]
@@ -88,12 +104,12 @@ _receieveMessages = (url, options) ->
 
   Messages
 
-_deleteMessage = (url, handle) ->
+_deleteMessage = ( url, handle ) ->
   AWS.SQS.deleteMessage
     QueueUrl: url
     ReceiptHandle: handle
 
-_deleteMessages = (url, handles) ->
+_deleteMessages = ( url, handles ) ->
   AWS.SQS.deleteMessageBatch
     QueueUrl: url
     Entries: do ->
@@ -101,7 +117,7 @@ _deleteMessages = (url, handles) ->
         Id: "#{index}"
         ReceiptHandle: handle
 
-popMessages = (name, options) ->
+popMessages = ( name, options ) ->
   if ( url = await getQueueURL name )?
     _messages = await _receieveMessages url, options
     _messages ?= []
@@ -118,14 +134,12 @@ popMessages = (name, options) ->
     messages
 
   else
-    throw new Error "dolores:queue: the queue #{name} is not available"
+    throw new Error "dolores:queue: the queue #{ name } is not available"
 
 # TODO: handle the batch versions of these operations...
 
 export {
-  _createQueue
   getQueueARN
-  createQueue
   getQueueURL
   putQueue
   emptyQueue

@@ -1,9 +1,13 @@
-import Crypto from "crypto"
+import Crypto from "node:crypto"
+import YAML from "js-yaml"
 import * as Lambda from "@aws-sdk/client-lambda"
 import * as S3 from "@aws-sdk/client-s3"
 import * as Text from "@dashkite/joy/text"
 import * as Time from "@dashkite/joy/time"
 import { lift } from "./helpers"
+import * as Stack from "./stack"
+import * as Queue from "./queue"
+
 
 AWS =
   Lambda: lift Lambda
@@ -152,47 +156,43 @@ _invokeLambda = (name, sync, input) ->
 invokeLambda = (name, input) -> _invokeLambda name, false, input
 syncInvokeLambda = (name, input) -> _invokeLambda name, true, input
 
-listSources = (name) ->
-  results = []
-  next = undefined
-  while true
-    result = await AWS.Lambda.listEventSourceMappings
-      FunctionName: name
-      Marker: next
+putSources = ( lambda, sources ) ->
+  _template =
+    AWSTemplateFormatVersion: "2010-09-09"
+    Description: "Specify Event Sources for Lambda [ #{lambda} ]"
+    Resources: {}
 
-    { EventSourceMappings, NextMarker } = result
+  for source, i in sources
+    options = {}
 
-    next = NextMarker
-    results.push EventSourceMappings...
-    if !next?
-      return results
+    switch source.type
+      when "sqs"
+        options.EventSourceArn = await Queue.getQueueARN source.name
+        options.FunctionResponseTypes = [ "ReportBatchItemFailures" ] # enables partial batch failures
+        if source.batchSize > 10
+          options.MaximumBatchingWindowInSeconds = 1
+        options.ScalingConfig = 
+          MaximumConcurrency: source.concurrency
+      else
+        throw new Error "dolores does not currently support #{source.type} sources"
 
-deleteSource = (source) ->
-  await AWS.Lambda.deleteEventSourceMapping UUID: source.UUID
+    _template.Resources[ "Source#{i}" ] =  
+      Type: "AWS::Lambda::EventSourceMapping"
+      Properties: {
+        options...
+        FunctionName: lambda,
+        BatchSize: source.batchSize
+        Enabled: source.enabled ? true
+      }
 
-deleteSources = (name) ->
-  sources = await listSources name
-  for source in sources
-    await deleteSource source
+  name = "#{ lambda }-sources"
+  await Stack.deployStack name, YAML.dump _template
 
-_createSource = (source) ->
-  await AWS.Lambda.createEventSourceMapping source
+  undefined
 
-createSource = (source, duration = 125) ->
-  try
-    await _createSource source
-  catch
-    duration *= 2
-    await Time.sleep duration
-    await createSource source, duration
-
-createSources = (sources) ->
-  for source in sources
-    await createSource source
-
-putSources = (name, sources) ->
-  await deleteSources name
-  await createSources sources
+deleteSources = ( lambda ) ->
+  name = "#{ lambda }-sources"
+  await Stack.deleteStack name
   
 
 export {
@@ -209,10 +209,7 @@ export {
   deleteLambda
   invokeLambda
   syncInvokeLambda
-  listSources
-  deleteSources
-  deleteSource
-  createSources
-  createSource
+
   putSources
+  deleteSources
 }
