@@ -7,7 +7,6 @@ import * as Text from "@dashkite/joy/text"
 import { lift } from "./helpers"
 import * as Stack from "./stack"
 
-createStepFunction = ({ name, dictionary, resources, description }) ->
 
 cache =
   account: null
@@ -59,6 +58,7 @@ putQueue = ( name, options ) ->
         Properties: Obj.merge defaults, options
 
   await Stack.deployStack ( nameStack name ), YAML.dump _template
+  undefined
   
 
 # AWS indicates this can take 60 seconds to complete.
@@ -69,6 +69,7 @@ emptyQueue = ( name ) ->
 # AWS indicates this can take 60 seconds to complete.
 deleteQueue = ( name ) ->
   await Stack.deleteStack nameStack name
+  undefined
 
 pushMessage = ( name, message, options ) ->
   if !message?
@@ -83,9 +84,11 @@ pushMessage = ( name, message, options ) ->
   if !(Type.isString message)
     throw new Error "dolores:queue unable to queue unknown message type"
 
-
-  defaults =
-    MessageGroupId: "DefaultMessageGroupID"
+  if name.endsWith ".fifo"
+    defaults =
+      MessageGroupId: "DefaultMessageGroupID"
+  else
+    defaults = {}
 
   if ( url = await getQueueURL name )?
     await AWS.SQS.sendMessage Obj.merge defaults, options,
