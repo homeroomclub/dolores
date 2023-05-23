@@ -97,7 +97,7 @@ pushMessage = ( name, message, options ) ->
   else
     throw new Error "dolores:queue: the queue #{name} is not available"
 
-_receieveMessages = ( url, options ) ->
+_receiveMessages = ( url, options ) ->
   defaults = 
     AttributeNames: [ "All" ]
     MessageAttributeNames: [ "All" ]
@@ -122,7 +122,7 @@ _deleteMessages = ( url, handles ) ->
 
 popMessages = ( name, options ) ->
   if ( url = await getQueueURL name )?
-    _messages = await _receieveMessages url, options
+    _messages = await _receiveMessages url, options
     _messages ?= []
     handles = []
     messages = []
@@ -139,6 +139,23 @@ popMessages = ( name, options ) ->
   else
     throw new Error "dolores:queue: the queue #{ name } is not available"
 
+
+receiveMessages = ( name, options ) ->
+  if ( url = await getQueueURL name )?
+    defaults = 
+      AttributeNames: [ "All" ]
+      MessageAttributeNames: [ "All" ]
+
+    { Messages } = await AWS.SQS.receiveMessage Obj.merge defaults, options,
+      QueueUrl: url
+
+    Messages
+
+  else
+    throw new Error "dolores:queue: the queue #{ name } is not available"
+
+
+
 # TODO: handle the batch versions of these operations...
 
 export {
@@ -149,4 +166,5 @@ export {
   deleteQueue
   pushMessage
   popMessages
+  receiveMessages
 }
