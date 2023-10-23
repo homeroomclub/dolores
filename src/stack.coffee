@@ -70,6 +70,16 @@ nodes = [
 
 ]
 
+listStacks = ( options = {} ) ->
+  { next, statuses = [] } = options
+  { StackSummaries, NextToken } = await AWS.CloudFormation.listStacks
+    NextToken: next
+    StackStatusFilter: statuses
+
+  next: NextToken
+  stacks: StackSummaries
+
+
 deployStack = (name, template, capabilities) ->
 
   capabilities ?= [ "CAPABILITY_IAM" ]
@@ -120,6 +130,7 @@ deleteStack = (name) ->
 export {
   hasStack
   getStack
+  listStacks
   deployStack
   deployStackAsync
   deleteStack
